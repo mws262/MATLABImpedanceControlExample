@@ -99,14 +99,12 @@ matlabFunction(Ta, 'file', 'ImpedenceControl');
 %%%%%%%%%%%%%%%% Energy eqns %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-%Turned this off after making sure stuff worked:
+syms k1 k2 real
 
-% syms k1 k2 real
-% 
-% PE = g*dot(ra_c2,j)*m2 + g*dot(ra_c1,j)*m1;
-% KE = 1/2*I1*thdot1^2 + 1/2*I2*(thdot2+thdot1)^2 + 1/2*m1*dot(Vc1,Vc1) + 1/2*m2*dot(Vc2,Vc2);
-% 
-% Etot = PE + KE;
-% 
-% matlabFunction(Etot, 'file', 'TotEnergy');
+PE = g*dot(ra_c2,j)*m2 + g*dot(ra_c1,j)*m1;
+KE = 1/2*I1*thdot1^2 + 1/2*I2*(thdot2+thdot1)^2 + 1/2*m1*dot(Vc1,Vc1) + 1/2*m2*dot(Vc2,Vc2);
+
+Etot = PE + KE;
+
+matlabFunction(Etot, 'file', 'TotEnergy');
 

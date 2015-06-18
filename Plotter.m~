@@ -3,19 +3,14 @@
 %
 %   Matthew Sheen, 2014
 %
-%   Note: data is passed from this to the callback functions in the figure
-%   object's UserData field.
-%   For compatibility with 2014a and earlier, I use set/get instead of the
-%   object.field notation.
-%   Can also be done with global vars as in the backup version. I hate
-%   global variables so, this version is the result.
-%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function Plotter(p)
 close all
+% global f xtarget ytarget tarControl Fx Fy xend yend
 
 %Playback speed:
 % playback = p.animationSpeed;
+endtime = 10;
 
 %Name the whole window and define the mouse callback function
 f = figure;
@@ -178,8 +173,7 @@ function ClickDown(varargin)
     set(varargin{1},'UserData',figData);
 end
 
-% any keypress switches from dragging the setpoint to applying a
-% disturbance.
+% any ke
 function KeyPress(hObject, eventdata, handles)
 
 figData = get(hObject,'UserData');
@@ -194,7 +188,6 @@ figData.tarControl = ~figData.tarControl;
 set(hObject,'UserData',figData);
 end
 
-% Checks mouse position and sends it back up.
 function MousePos(varargin)
     figData = get(varargin{1},'UserData');
 

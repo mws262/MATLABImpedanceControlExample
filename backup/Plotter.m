@@ -3,35 +3,22 @@
 %
 %   Matthew Sheen, 2014
 %
-%   Note: data is passed from this to the callback functions in the figure
-%   object's UserData field.
-%   For compatibility with 2014a and earlier, I use set/get instead of the
-%   object.field notation.
-%   Can also be done with global vars as in the backup version. I hate
-%   global variables so, this version is the result.
-%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function Plotter(p)
 close all
+global f simArea xtarget ytarget tarControl Fx Fy xend yend
 
 %Playback speed:
 % playback = p.animationSpeed;
+endtime = 10;
+tarControl = true; %Whether we're applying a disturbance or changing the target point.
 
 %Name the whole window and define the mouse callback function
 f = figure;
 set(f,'WindowButtonMotionFcn','','WindowButtonDownFcn',@ClickDown,'WindowButtonUpFcn',@ClickUp,'KeyPressFc',@KeyPress);
 
-figData.xtarget = [];
-figData.ytarget = [];
-figData.Fx = [];
-figData.Fy = [];
-figData.xend = [];
-figData.yend = [];
-figData.fig = f;
-figData.tarControl = true;
-
 %%%%%%%% 1st Subplot -- the pendulum animation %%%%%%%
-figData.simArea = subplot(1,1,1); %Eliminated other subplots, but left this for syntax consistency.
+simArea = subplot(3,4,[1 2 5 6 9 10]); %4x2 grid with animation taking the top panel of 3x2
 axis equal
 hold on
 
@@ -64,19 +51,48 @@ targetPt = plot(p.xtarget,p.ytarget,'xr','MarkerSize',30);
 
 hold off
 
+%%%%%%%% 2nd Subplot -- the system energy %%%%%%%
+%NOT USED
+subplot(3,4,[3 4])
+hold on
+energyPlot = plot(0,0,'b'); %Energy plot over time.
+xlabel('Time (s)','FontSize',16)
+ylabel('Energy (J)','FontSize',16)
+hold off
+
+%%%%%%%% 3rd Subplot -- the control torque %%%%%%%
+%NOT USED
+subplot(3,4,[7 8])
+hold on
+torquePlot1 = plot(0,0,'r');
+torquePlot2 = plot(0,0,'b');
+xlim([0,endtime])
+ylim([-8 8])
+xlabel('Time (s)','FontSize',16)
+ylabel('Torque (Nm)','FontSize',16)
+legend('Motor 1 torque','Motor 2 torque');
+hold off
+
+%%%%%%%% 4th Subplot -- a placeholder %%%%%%%
+subplot(3,4,[11 12])
+workPlot = plot(0,0);
+xlabel('Time (s)','FontSize',16)
+ylabel('Placeholder','FontSize',16)
+workdat = [];
+timedat = [];
 
 %Make the whole window big for handy viewing:
-set(gcf, 'units', 'inches', 'position', [5 5 10 9])
+set(gcf, 'units', 'inches', 'position', [5 5 18 9])
 
 %Animation plot loop -- Includes symplectic integration now.
+TimeArray = []; %Use later to implement torque over time plot
+T1Array = [];
+T2Array = [];
 z1 = p.init;
 told = 0;
 
-set(f,'UserData',figData);
-
 tic %Start the clock
 while (ishandle(1))
-    figData = get(f,'UserData');
     %%%% INTEGRATION %%%%
     tnew = toc;
     dt = tnew - told;
@@ -104,12 +120,12 @@ while (ishandle(1))
     
     %If there are new mouse click locations, then set those as the new
     %target.
-    if ~isempty(figData.xtarget)
-    p.xtarget = figData.xtarget;
+    if ~isempty(xtarget)
+    p.xtarget = xtarget;
     end
     
-    if ~isempty(figData.ytarget)
-    p.ytarget = figData.ytarget;
+    if ~isempty(ytarget)
+    p.ytarget = ytarget;
     end
     set(targetPt,'xData',p.xtarget); %Change the target point graphically.
     set(targetPt,'yData',p.ytarget);
@@ -117,15 +133,14 @@ while (ishandle(1))
     %When you hit a key, it changes to force mode, where the mouse will
     %pull things.
     ra_e = ForwardKin(p.l1,p.l2,z1(1),z1(3));
-    figData.xend = ra_e(1);
-    figData.yend = ra_e(2);
-    set(f,'UserData',figData);
+    xend = ra_e(1);
+    yend = ra_e(2);
     
-    if ~isempty(figData.Fx)
-    p.Fx = figData.Fx;
+    if ~isempty(Fx)
+    p.Fx = Fx;
     end
-    if ~isempty(figData.Fy)
-    p.Fy = figData.Fy;
+    if ~isempty(Fy)
+    p.Fy = Fy;
     end
     
     tstar = told; %Get the time (used during this entire iteration)
@@ -150,61 +165,37 @@ while (ishandle(1))
     set(h2,'yData',(rot1(2,3)+rot1(2,4))/2)
     
     %Show torques on screen (text only atm) update for time series later.
-    set(tmeter1,'string',strcat(num2str(T1,2),' Nm'));
-    set(tmeter2,'string',strcat(num2str(T2,2),' Nm'));
+    set(tmeter1,'string',strcat(num2str(T1,2),' Nm'))
+    set(tmeter2,'string',strcat(num2str(T2,2),' Nm'))
     
-    drawnow;
-end
-end
-
-%%%% BEGIN CALLBACKS FOR MOUSE AND KEYBOARD STUFF %%%%%
-
-% When click-up occurs, disable the mouse motion detecting callback
-function ClickUp(varargin)
-    figData = get(varargin{1},'UserData');
-    set(figData.fig,'WindowButtonMotionFcn','');
-    figData.Fx = 0;
-    figData.Fy = 0;
-    set(varargin{1},'UserData',figData);
-end
-
-% When click-down occurs, enable the mouse motion detecting callback
-function ClickDown(varargin)
-    figData = get(varargin{1},'UserData');
-    figData.Fx = 0;
-    figData.Fy = 0;
-
-    set(figData.fig,'WindowButtonMotionFcn',@MousePos);
-    set(varargin{1},'UserData',figData);
-end
-
-% any keypress switches from dragging the setpoint to applying a
-% disturbance.
-function KeyPress(hObject, eventdata, handles)
-
-figData = get(hObject,'UserData');
-
-figData.tarControl = ~figData.tarControl;
-
-    if figData.tarControl
-       disp('Mouse will change the target point of the end effector.')
-    else
-       disp('Mouse will apply a force on end effector.') 
-    end
-set(hObject,'UserData',figData);
-end
-
-% Checks mouse position and sends it back up.
-function MousePos(varargin)
-    figData = get(varargin{1},'UserData');
-
-    mousePos = get(figData.simArea,'CurrentPoint');
-    if figData.tarControl
-        figData.xtarget = mousePos(1,1);
-        figData.ytarget = mousePos(1,2);
-    else
-        figData.Fx = 10*(mousePos(1,1)-figData.xend);
-        figData.Fy = 10*(mousePos(1,2)-figData.yend);
-    end
-     set(varargin{1},'UserData',figData);
+    %Subplots below not used.
+    %Make the tracked trajectory also show up in real time.
+%     plotIndTraj = p.tt<tstar;
+%     set(trajectory,'xData',p.xt(plotIndTraj));
+%     set(trajectory,'yData',p.yt(plotIndTraj));
+    
+    %Force vector:
+%     xend = get(link2,'xData');
+%     yend = get(link2,'yData');
+%     set(ForceVector,'X',[.5 xend(3)]);
+%     set(ForceVector,'Y',[.5 yend(3)]);    
+      
+    %Make the energy profile also plot out over time simultaneously.
+%     plotInd = time<tstar;
+%     set(energyPlot,'xData',time(plotInd)) %Plot all points that occur before our current time (not bothering with interpolation given the scale)
+%     set(energyPlot,'yData',energy(plotInd))
+%   
+%     %Make the power profile also plot out over time simultaneously.
+%     set(torquePlot1,'xData',time(plotInd)) %Plot all points that occur before our current time (not bothering with interpolation given the scale)
+%     set(torquePlot1,'yData',Tarray1(plotInd))
+%     
+%     set(torquePlot2,'xData',time(plotInd)) %Plot all points that occur before our current time (not bothering with interpolation given the scale)
+%     set(torquePlot2,'yData',Tarray2(plotInd))
+% %     
+%     timedat = [timedat,tstar];
+%     workdat = [workdat,trapz(time(plotInd),power(plotInd),1)];
+%     
+ 
+    %Put a little delay in to make iterations not freak out.
+    pause(0.00001)
 end
