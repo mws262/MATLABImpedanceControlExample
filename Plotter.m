@@ -64,9 +64,13 @@ targetPt = plot(p.xtarget,p.ytarget,'xr','MarkerSize',30);
 
 hold off
 
-
 %Make the whole window big for handy viewing:
-set(gcf, 'units', 'inches', 'position', [5 5 10 9])
+set(f, 'units', 'inches', 'position', [5 5 10 9])
+set(f,'Color',[1,1,1]);
+
+% Turn the axis off
+ax = get(f,'Children');
+set(ax,'Visible','off');
 
 %Animation plot loop -- Includes symplectic integration now.
 z1 = p.init;
@@ -75,7 +79,7 @@ told = 0;
 set(f,'UserData',figData);
 
 tic %Start the clock
-while (ishandle(1))
+while (ishandle(f))
     figData = get(f,'UserData');
     %%%% INTEGRATION %%%%
     tnew = toc;
